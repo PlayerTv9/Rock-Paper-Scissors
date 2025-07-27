@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:flutter/material.dart';
 import 'package:rockpaperscissors/Object.dart';
@@ -47,12 +48,25 @@ class _MyHomePageState extends State<MyHomePage> {
   void initState(){
     super.initState();
     _controller = ConfettiController(duration: Duration(seconds: 2));
+    initPunteggio();
+
 
   }
   @override
   void dispose(){
     _controller.dispose();
     super.dispose();
+  }
+
+  String minValue = "0";
+  String maxValue = "0";
+
+  void initPunteggio() async{
+    minValue = await readPunteggioMin();
+    maxValue = await readPunteggioMax();
+    setState(() {
+
+    });
   }
 
 
@@ -70,7 +84,11 @@ class _MyHomePageState extends State<MyHomePage> {
   int punti = 0;
 
 
+
+
   void play() async{
+
+
 
     if(playerChoice != null){
       int enemyValue = await enemyChoice();
@@ -85,6 +103,15 @@ class _MyHomePageState extends State<MyHomePage> {
         resultGame = "You lose!";
         punti--;
       }
+      if(punti > int.parse(maxValue)){
+        await writePunteggioMax(punti);
+        maxValue = await readPunteggioMax();
+      }
+      if(punti < int.parse(minValue)){
+        await writePunteggioMin(punti);
+        minValue = await readPunteggioMin();
+      }
+
       setState(() {
 
       });
@@ -111,6 +138,69 @@ class _MyHomePageState extends State<MyHomePage> {
     return result;
   }
 
+  Future<String> get localPath async{
+    final directory = await getApplicationCacheDirectory();
+
+    return directory.path;
+}
+
+Future<File> get localMaxPunteggioFile async{
+    final path = await localPath;
+    return File('$path/maxPunteggio.txt');
+}
+
+  Future<File> get localMinPunteggioFile async{
+    final path = await localPath;
+    return File('$path/minPunteggio.txt');
+  }
+
+  Future<File> writePunteggioMax(int punteggio) async {
+    final file = await localMaxPunteggioFile;
+    return file.writeAsString(punteggio.toString());
+  }
+
+  Future<File> writePunteggioMin(int punteggio) async {
+    final file = await localMinPunteggioFile;
+    return file.writeAsString(punteggio.toString());
+  }
+
+  Future<String> readPunteggioMax() async{
+    try{
+      final file = await localMaxPunteggioFile;
+
+      if(!(await file.exists())){
+        await file.writeAsString("0");
+        return "0";
+      }
+
+      final content = await file.readAsString();
+      return content;
+    }catch(e){
+      await ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Qualcosa è andato storto! errre: $e")));
+      return "";
+    }
+  }
+
+  Future<String> readPunteggioMin() async{
+    try{
+      final file = await localMinPunteggioFile;
+
+      if(!(await file.exists())){
+        await file.writeAsString("0");
+        return "0";
+      }
+      final content = await file.readAsString();
+
+
+      return content;
+    }catch(e){
+      await ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Qualcosa è andato storto! errre: $e")));
+      return "";
+    }
+  }
+
 
 
   @override
@@ -134,6 +224,7 @@ class _MyHomePageState extends State<MyHomePage> {
           children: <Widget>[
             const SizedBox(height: 30,),
             Text(punti.toString(), style: const TextStyle(fontSize: 30),),
+            Text("Punteggio migliore: $maxValue\nPunteggio peggiore: $minValue",style: const TextStyle(fontSize: 20)),
             Expanded(child:
             Center(
 
